@@ -4,7 +4,6 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -22,7 +21,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // --- MongoDB Setup ---
-const uri = process.env.DB_URI;
+const uri = "mongodb+srv://imsaimun00_db_user:OJk5GJZQxFI6w9w1@cluster0.upvpfjg.mongodb.net/?appName=Cluster0&authSource=admin";
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
