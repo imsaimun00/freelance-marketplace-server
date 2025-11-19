@@ -38,7 +38,7 @@ let acceptedTasksCollection;
 
 async function run() {
     try {
-        //await client.connect();
+        await client.connect();
         db = client.db(process.env.DB_NAME);
         jobCollection = db.collection("jobs");
         acceptedTasksCollection = db.collection("acceptedTasks");
