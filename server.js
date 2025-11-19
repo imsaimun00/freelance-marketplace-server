@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // --- MongoDB Setup ---
-const uri = "process.env.DB_URI";
+const uri = process.env.DB_URI;
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
