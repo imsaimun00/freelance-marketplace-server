@@ -12,10 +12,31 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // --- Middleware ---
-app.use(cors({
-    origin: ['http://localhost:5173'],
-    credentials: true,
-}));
+// Client URLs for CORS (Replace this with the list of allowed origins)
+const clientUrls = [
+    'http://localhost:5173', 
+    // REPLACE THIS WITH YOUR DEPLOYED CLIENT URL (e.g., Netlify/Vercel domain)
+    'https://feelancehub.netlify.app/', 
+    // Add Vercel Server URL for full access
+    'https://freelance-marketplace-server-9kk6psuxm.vercel.app/' 
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or local file requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow if the origin is in our allowed list
+        if (clientUrls.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // Block all other origins (This is the security measure)
+            callback(new Error('Not allowed by CORS'), false);
+        }
+    },
+    credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 //app.use(bodyParser.json());
 app.use(cookieParser());
