@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 const clientUrls = [
     'http://localhost:5173', 
     'https://feelancehub.netlify.app',
-    'https://freelance-marketplace-server-n82ua9a9i.vercel.app' 
+    'https://freelance-marketplace-server-kohl.vercel.app' 
 ];
 
 const corsOptions = {
