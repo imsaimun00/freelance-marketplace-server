@@ -1,5 +1,3 @@
-// server.js (FINAL FIX)
-
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
@@ -12,25 +10,22 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // --- Middleware ---
-// Client URLs for CORS (Replace this with the list of allowed origins)
 const clientUrls = [
     'http://localhost:5173', 
-    // REPLACE THIS WITH YOUR DEPLOYED CLIENT URL (e.g., Netlify/Vercel domain)
-    'https://feelancehub.netlify.app/', 
-    // Add Vercel Server URL for full access
-    'https://freelance-marketplace-server-9kk6psuxm.vercel.app/' 
+    'https://feelancehub.netlify.app',
+    'https://freelance-marketplace-server-n82ua9a9i.vercel.app' 
 ];
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or local file requests)
+        // Allow requests with no origin
         if (!origin) return callback(null, true);
         
-        // Allow if the origin is in our allowed list
+        // Allow if the origin is in allowed list
         if (clientUrls.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            // Block all other origins (This is the security measure)
+            // Block all other origins
             callback(new Error('Not allowed by CORS'), false);
         }
     },
@@ -75,7 +70,7 @@ async function run() {
             });
         };
 
-        // --- ADDED: Explicit Root Route for Vercel Fix ---
+        
         app.get('/', (req, res) => {
             res.send('Freelance Hub Server is running!');
         });
@@ -115,19 +110,134 @@ async function run() {
             res.send(job);
         });
 
-        // --- Other API routes similar to your previous code should go here ---
-        // NOTE: Ensure all other necessary CRUD routes are added here inside run()
-        // Example: app.post('/jobs', verifyToken, async (req, res) => { ... });
+        app.get('/jobs/employer/:email', verifyToken, async (req, res) => {
+            const employerEmail = req.params.email;
+            
+            if (req.user.email !== employerEmail) {
+                return res.status(403).send({ message: 'Forbidden: Cannot access other user\'s jobs' });
+            }
 
-    } finally {
-        // Optional: leave client open for live server
-    }
+            const query = { employerEmail };
+            const result = await jobCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        app.post('/jobs', verifyToken, async (req, res) => {
+            const newJob = req.body;
+            newJob.postingDate = new Date(newJob.postingDate || new Date()).toISOString(); 
+            
+            if (req.user.email !== newJob.employerEmail) {
+                return res.status(403).send({ message: 'Forbidden: Email mismatch' });
+            }
+
+            const result = await jobCollection.insertOne(newJob);
+            res.send(result);
+        });
+
+        app.put('/job/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+            const updatedData = req.body;
+            
+            const job = await jobCollection.findOne({ _id: new ObjectId(id) });
+
+            if (!job || req.user.email !== job.employerEmail) {
+                return res.status(403).send({ message: 'Forbidden: You cannot update this job' });
+            }
+            
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    jobTitle: updatedData.jobTitle,
+                    jobCategory: updatedData.jobCategory,
+                    description: updatedData.description,
+                    coverImage: updatedData.coverImage,
+                    minPrice: updatedData.minPrice,
+                    maxPrice: updatedData.maxPrice,
+                    deadline: updatedData.deadline,
+                },
+            };
+            const result = await jobCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+        app.delete('/job/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+
+            const job = await jobCollection.findOne({ _id: new ObjectId(id) });
+            
+            if (!job || req.user.email !== job.employerEmail) {
+                return res.status(403).send({ message: 'Forbidden: You cannot delete this job' });
+            }
+
+            const query = { _id: new ObjectId(id) };
+            const result = await jobCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        // --- ACCEPTED TASKS Endpoints ---
+
+        app.post('/accepted-tasks', verifyToken, async (req, res) => {
+            const task = req.body;
+            const jobTakerEmail = task.jobTakerEmail;
+
+            if (req.user.email !== jobTakerEmail) {
+                return res.status(403).send({ message: 'Forbidden: Email mismatch' });
+            }
+            
+            const existingTask = await acceptedTasksCollection.findOne({ 
+                jobId: task.jobId, 
+                jobTakerEmail: jobTakerEmail 
+            });
+
+            if (existingTask) {
+                return res.send({ message: 'Already accepted', insertedId: null });
+            }
+
+            const result = await acceptedTasksCollection.insertOne(task);
+            res.send(result);
+        });
+        
+        app.get('/accepted-tasks/taker/:email', verifyToken, async (req, res) => {
+            const jobTakerEmail = req.params.email;
+            
+            if (req.user.email !== jobTakerEmail) {
+                return res.status(403).send({ message: 'Forbidden: Cannot access other user\'s accepted tasks' });
+            }
+
+            const query = { jobTakerEmail };
+            const result = await acceptedTasksCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        app.delete('/accepted-tasks/:id', verifyToken, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            
+            const task = await acceptedTasksCollection.findOne(query);
+            if (!task || req.user.email !== task.jobTakerEmail) {
+                return res.status(403).send({ message: 'Forbidden: You cannot perform this action on this task' });
+            }
+
+            const result = await acceptedTasksCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        // --- Default Route & Error Handling ---
+        app.get('/', (req, res) => {
+            res.send('Freelance Hub Server is running!');
+        });
+        
+        // Error handling middleware
+        app.use((err, req, res, next) => {
+            console.error(err.stack);
+            res.status(500).send('Something broke!');
+        });
+
+    } finally {}
 }
 run().catch(console.dir);
 
-// --- Serve Frontend Build (These lines should be kept outside run() but below API routes) ---
-// Note: If you want to serve the client build, this part needs to be placed 
-// AFTER the run() function finishes (which it is here).
+// Serve Frontend Build
 app.use(express.static(path.join(__dirname, "client", "dist")));
 
 app.get("*", (req, res) => {
