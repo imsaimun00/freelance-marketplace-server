@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 // ------------------------- CORS -------------------------
 const clientUrls = [
     "http://localhost:5173",
-    "https://feelancehub.netlify.app" // ⭐ প্রোডাকশন ফ্রন্টএন্ড
+    "https://feelancehub.netlify.app"
 ];
 
 const corsOptions = {
@@ -48,7 +48,7 @@ async function run() {
         console.log("Trying to connect with MongoDB...");
         
         try {
-            //await client.connect();
+            await client.connect();
             console.log("✅ MongoDB connected successfully!");
         } catch (err) {
             console.error("❌ MongoDB connection failed:", err.message);
